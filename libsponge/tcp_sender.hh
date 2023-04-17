@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <queue>
+#include <set>
 
 //! \brief The "sender" part of a TCP implementation.
 
@@ -23,6 +24,7 @@ class TCPSender {
     //! outbound queue of segments that the TCPSender wants sent
     std::queue<TCPSegment> _segments_out{};
 
+
     //! retransmission timer for the connection
     unsigned int _initial_retransmission_timeout;
 
@@ -31,6 +33,21 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    std::queue<TCPSegment> _segments_outstanding{};
+
+    size_t _bytes_in_flight = 0;
+    size_t _recv_ackno = 0;
+    bool _syn_flag = false;
+    bool _fin_flag = false;
+    size_t _window_size = 0;
+
+    size_t _timer = 0;
+    bool _timer_running = false;
+    size_t _retransmission_timeout = 0;
+    size_t _consecutive_retransmission = 0;
+
+    void send_segment(TCPSegment &seg);
 
   public:
     //! Initialize a TCPSender
@@ -52,9 +69,10 @@ class TCPSender {
 
     //! \brief Generate an empty-payload segment (useful for creating empty ACK segments)
     void send_empty_segment();
+    void send_empty_segment(WrappingInt32 seqno);
 
     //! \brief create and send segments to fill as much of the window as possible
-    void fill_window();
+    void fill_window(bool send_syn = true);
 
     //! \brief Notifies the TCPSender of the passage of time
     void tick(const size_t ms_since_last_tick);
